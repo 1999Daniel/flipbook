@@ -79,28 +79,23 @@
   .topbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
+    padding: 8px 12px;
     background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(26,26,46,0) 100%);
     pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
   }
+  .topbar.hide-ui { opacity: 0; transform: translateY(-10px); pointer-events: none; }
   .topbar > * { pointer-events: auto; }
-  .topbar .back-btn {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.08); border: none; color: var(--text);
-    font-size: 1.2rem; cursor: pointer;
+  .topbar .btn-icon {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none; color: var(--text);
+    font-size: 1rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     backdrop-filter: blur(10px);
   }
   .topbar .page-indicator {
-    font-size: 0.85rem; color: var(--text-dim);
-    background: rgba(255,255,255,0.06); padding: 6px 14px; border-radius: 20px;
-    backdrop-filter: blur(10px);
-  }
-  .topbar .menu-btn {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.08); border: none; color: var(--text);
-    font-size: 1.2rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; color: var(--text-dim);
+    background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 14px;
     backdrop-filter: blur(10px);
   }
 
@@ -163,61 +158,62 @@
   /* ── Navigation Arrows ── */
   .nav-arrow {
     position: fixed; top: 50%; z-index: 200;
-    width: 44px; height: 44px; border-radius: 50%;
+    width: 36px; height: 36px; border-radius: 50%;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-    color: var(--text); font-size: 1.3rem; cursor: pointer;
+    color: var(--text); font-size: 1.1rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transform: translateY(-50%);
     backdrop-filter: blur(10px);
-    transition: background 0.2s, opacity 0.3s;
+    transition: opacity 0.4s, background 0.2s;
   }
+  .nav-arrow.hide-ui { opacity: 0; pointer-events: none; }
   .nav-arrow:active { background: rgba(255,255,255,0.15); }
-  .nav-arrow.left  { left: max(8px, calc((100vw - min(92vw, 88vh * 1.778)) / 2 - 60px)); }
-  .nav-arrow.right { right: max(8px, calc((100vw - min(92vw, 88vh * 1.778)) / 2 - 60px)); }
-  @media (max-width: 768px) {
-    .nav-arrow { opacity: 0; pointer-events: none; }
-  }
+  .nav-arrow.left  { left: max(4px, calc((100vw - min(92vw, 88vh * 1.778)) / 2 - 50px)); }
+  .nav-arrow.right { right: max(4px, calc((100vw - min(92vw, 88vh * 1.778)) / 2 - 50px)); }
 
   /* ── Bottom Bar ── */
   .bottombar {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    padding: 16px 16px calc(16px + var(--safe-bottom));
-    background: linear-gradient(0deg, rgba(26,26,46,0.95) 0%, rgba(26,26,46,0) 100%);
-    display: flex; flex-direction: column; gap: 10px;
+    padding: 8px 12px calc(8px + var(--safe-bottom));
+    background: linear-gradient(0deg, rgba(26,26,46,0.85) 0%, rgba(26,26,46,0) 100%);
+    display: flex; flex-direction: column; gap: 6px;
     pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
   }
+  .bottombar.hide-ui { opacity: 0; transform: translateY(10px); pointer-events: none; }
   .bottombar > * { pointer-events: auto; }
 
   /* Progress Bar */
   .progress-wrap {
-    display: flex; align-items: center; gap: 10px; padding: 0 4px;
+    display: flex; align-items: center; gap: 8px; padding: 0 4px;
   }
   .progress-bar {
-    flex: 1; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;
+    flex: 1; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px; overflow: hidden;
   }
   .progress-bar .fill {
-    height: 100%; background: var(--accent); border-radius: 2px;
+    height: 100%; background: var(--accent); border-radius: 1px;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     width: 5%;
   }
-  .progress-num { font-size: 0.75rem; color: var(--text-dim); min-width: 36px; text-align: right; }
+  .progress-num { font-size: 0.7rem; color: var(--text-dim); min-width: 30px; text-align: right; }
 
-  /* Bottom Buttons */
+  /* Bottom Buttons — tiny dots instead of big buttons */
   .bottom-btns {
-    display: flex; gap: 8px; justify-content: center;
+    display: flex; gap: 6px; justify-content: center;
   }
   .bottom-btn {
-    flex: 1; max-width: 140px; padding: 10px 16px;
-    border-radius: 24px; border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.04);
-    color: var(--text); font-size: 0.85rem; cursor: pointer;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: var(--text); font-size: 0.7rem; cursor: pointer;
     backdrop-filter: blur(10px);
-    transition: background 0.2s; text-align: center;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
   }
-  .bottom-btn:active { background: rgba(255,255,255,0.1); }
+  .bottom-btn:active { background: rgba(255,255,255,0.2); }
   .bottom-btn.accent {
     background: var(--accent); color: #1a1a2e; border-color: var(--accent);
-    font-weight: 600;
+    font-weight: 700; width: 36px; height: 36px; font-size: 0.8rem;
   }
 
   /* ── Thumbnail Grid Overlay ── */
@@ -327,9 +323,9 @@
 
 <!-- Top Bar -->
 <div class="topbar">
-  <button class="back-btn" id="btnCover" title="回到封面">⌂</button>
+  <button class="btn-icon" id="btnCover" title="封面">⌂</button>
   <span class="page-indicator" id="pageIndicator">封面</span>
-  <button class="menu-btn" id="btnGrid" title="目录">⊞</button>
+  <button class="btn-icon" id="btnGrid" title="目录">⊞</button>
 </div>
 
 <!-- Stage -->
@@ -357,8 +353,8 @@
     <span class="progress-num" id="progressNum">0/20</span>
   </div>
   <div class="bottom-btns">
-    <button class="bottom-btn" id="btnPrev">◀ 上一页</button>
-    <button class="bottom-btn accent" id="btnNext">下一页 ▶</button>
+    <button class="bottom-btn" id="btnPrev">◀</button>
+    <button class="bottom-btn accent" id="btnNext">▶</button>
   </div>
 </div>
 
@@ -401,6 +397,41 @@
   const gridContainer = document.getElementById('gridContainer');
   const toast = document.getElementById('toast');
   const stage = document.getElementById('stage');
+  const topbar = document.querySelector('.topbar');
+  const bottombar = document.querySelector('.bottombar');
+  const navArrows = document.querySelectorAll('.nav-arrow');
+
+  // ── Auto-hide UI on mobile ──
+  let uiTimer = null;
+  const UI_AUTO_HIDE_MS = 3000;
+
+  function showUI() {
+    topbar.classList.remove('hide-ui');
+    bottombar.classList.remove('hide-ui');
+    navArrows.forEach(a => a.classList.remove('hide-ui'));
+    resetUITimer();
+  }
+
+  function hideUI() {
+    if (gridOverlay.classList.contains('open')) return; // Don't hide when grid is open
+    topbar.classList.add('hide-ui');
+    bottombar.classList.add('hide-ui');
+    navArrows.forEach(a => a.classList.add('hide-ui'));
+  }
+
+  function resetUITimer() {
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(hideUI, UI_AUTO_HIDE_MS);
+  }
+
+  function toggleUI() {
+    if (topbar.classList.contains('hide-ui')) {
+      showUI();
+    } else {
+      hideUI();
+      clearTimeout(uiTimer);
+    }
+  }
 
   // ── Progressive Loading (UI shows immediately, images load in background) ──
   const imageCache = new Array(TOTAL_PAGES + 1).fill(null);
@@ -557,6 +588,7 @@
 
     updateUI();
     saveProgress();
+    resetUITimer(); // Show bars briefly after navigation
   }
 
   function nextPage() {
@@ -635,7 +667,8 @@
     } else if (x > third * 2) {
       nextPage();
     }
-    // middle third: do nothing (allow viewing)
+    // middle third: toggle UI visibility
+    toggleUI();
   });
 
   // ── Touch Swipe ──
@@ -751,6 +784,7 @@
   // ── Init ──
   bindButtons();
   preloadImages();
+  showUI(); // Show UI initially, will auto-hide after 3s
 })();
 </script>
 </body>
