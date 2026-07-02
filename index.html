@@ -697,7 +697,8 @@
     if (!inner) return;
     if (animate === false) inner.classList.add('zooming');
     else inner.classList.remove('zooming');
-    inner.style.transform = 'scale(' + zoomLevel + ') translate(' + panX + 'px,' + panY + 'px)';
+    // panX/Y are fractions of container; convert to % for translate
+    inner.style.transform = 'scale(' + zoomLevel + ') translate(' + (panX * 100) + '%,' + (panY * 100) + '%)';
     // Cursor
     const wrapper = inner.parentElement;
     if (wrapper) {
@@ -712,7 +713,7 @@
     const inner = getZoomInner();
     if (inner) {
       inner.classList.remove('zooming');
-      inner.style.transform = 'scale(1) translate(0,0)';
+      inner.style.transform = 'scale(1) translate(0%,0%)';
     }
     zoomResetBtn.classList.remove('visible');
     zoomIndicator.classList.remove('show');
