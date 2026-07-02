@@ -322,14 +322,14 @@
   <div class="logo">新航道国际物流</div>
   <div class="sub">NEW CHANNEL INTERNATIONAL LOGISTICS</div>
   <div class="spinner"></div>
-  <div class="count" id="loadCount">加载中...</div>
+  <div class="count" id="loadCount">点击任意处跳过</div>
 </div>
 
 <!-- Top Bar -->
 <div class="topbar">
-  <button class="back-btn" onclick="goToCover()" title="回到封面">⌂</button>
+  <button class="back-btn" id="btnCover" title="回到封面">⌂</button>
   <span class="page-indicator" id="pageIndicator">封面</span>
-  <button class="menu-btn" onclick="toggleGrid()" title="目录">⊞</button>
+  <button class="menu-btn" id="btnGrid" title="目录">⊞</button>
 </div>
 
 <!-- Stage -->
@@ -347,8 +347,8 @@
 </div>
 
 <!-- Nav Arrows -->
-<button class="nav-arrow left" onclick="prevPage()" aria-label="上一页">‹</button>
-<button class="nav-arrow right" onclick="nextPage()" aria-label="下一页">›</button>
+<button class="nav-arrow left" id="btnArrowLeft" aria-label="上一页">‹</button>
+<button class="nav-arrow right" id="btnArrowRight" aria-label="下一页">›</button>
 
 <!-- Bottom Bar -->
 <div class="bottombar">
@@ -357,16 +357,16 @@
     <span class="progress-num" id="progressNum">0/20</span>
   </div>
   <div class="bottom-btns">
-    <button class="bottom-btn" onclick="prevPage()">◀ 上一页</button>
-    <button class="bottom-btn accent" onclick="nextPage()">下一页 ▶</button>
+    <button class="bottom-btn" id="btnPrev">◀ 上一页</button>
+    <button class="bottom-btn accent" id="btnNext">下一页 ▶</button>
   </div>
 </div>
 
 <!-- Thumbnail Grid -->
-<div class="overlay" id="gridOverlay" onclick="if(event.target===this)toggleGrid()">
+<div class="overlay" id="gridOverlay">
   <div class="overlay-header">
     <span class="overlay-title">📑 目录浏览</span>
-    <button class="overlay-close" onclick="toggleGrid()">✕</button>
+    <button class="overlay-close" id="btnOverlayClose">✕</button>
   </div>
   <div class="overlay-grid" id="gridContainer"></div>
 </div>
@@ -379,8 +379,8 @@
   'use strict';
 
   const TOTAL_PAGES = 20; // PPT slides
-  // CDN 加速（国内加载快 10 倍+），如需关闭改回 'slides/'
-  const IMG_DIR = 'https://cdn.jsdelivr.net/gh/1999Daniel/flipbook@main/slides/';
+  // 国内直接加载（jsDelivr 不稳定，改回本地）
+  const IMG_DIR = 'slides/';
 
   let currentPage = -1; // -1 = cover
   let isAnimating = false;
@@ -402,88 +402,90 @@
   const toast = document.getElementById('toast');
   const stage = document.getElementById('stage');
 
-  // ── Progressive Loading (don't wait for all images) ──
+  // ── Progressive Loading (UI shows immediately, images load in background) ──
   const imageCache = new Array(TOTAL_PAGES + 1).fill(null);
   const imageLoaded = new Array(TOTAL_PAGES + 1).fill(false);
   const pageElements = new Array(TOTAL_PAGES + 1).fill(null);
-  let minLoaded = 0; // highest consecutive loaded page from 1
 
   function preloadImages() {
-    // Build DOM first (don't wait)
+    // Build DOM immediately
     buildPages();
     buildGrid();
     if (pageElements[1]) pageElements[1].className = 'page next';
     updateUI();
     loadProgress();
 
-    // Load all images in background, prioritizing first pages
-    const order = [];
-    for (let i = 1; i <= TOTAL_PAGES; i++) order.push(i);
-    // Start with first 3 pages
-    const priority = [1, 2, 3];
-    priority.forEach(i => loadImage(i));
+    // Start loading images
+    loadImage(1); loadImage(2); loadImage(3); // First 3 eagerly
 
-    // Then load rest with slight delay to not block first pages
-    let idx = 3;
-    function loadNext() {
-      if (idx >= TOTAL_PAGES) return;
-      idx++;
-      loadImage(order[idx - 1]);
-      setTimeout(loadNext, 100);
-    }
-    setTimeout(loadNext, 500);
-
-    // Hide loading screen quickly
-    setTimeout(() => {
+    // Hide loading screen as soon as first image loads (or tap to dismiss)
+    let loadingHidden = false;
+    function hideLoading() {
+      if (loadingHidden) return;
+      loadingHidden = true;
       loading.classList.add('hidden');
-      loadCount.textContent = '准备就绪';
-    }, 800);
+    }
+    // Dismiss loading on tap
+    loading.addEventListener('click', hideLoading);
+    // Auto-dismiss after 1.5s at most
+    setTimeout(hideLoading, 1500);
+
+    // Load remaining images in background
+    let bgIdx = 3;
+    function loadNext() {
+      if (bgIdx >= TOTAL_PAGES) {
+        loadCount.textContent = '就绪';
+        return;
+      }
+      bgIdx++;
+      loadImage(bgIdx);
+      setTimeout(loadNext, 200);
+    }
+    setTimeout(loadNext, 600);
   }
 
   function loadImage(i) {
     if (imageLoaded[i]) return;
+    if (imageCache[i]) return; // already loading
     const img = new Image();
+    imageCache[i] = img;
     img.onload = img.onerror = () => {
       imageLoaded[i] = true;
       loadedImages++;
-      loadCount.textContent = `加载中 ${loadedImages}/${TOTAL_PAGES}`;
-      // Update the actual page element src if it was placeholder
+      loadCount.textContent = `就绪 ${loadedImages}/${TOTAL_PAGES}`;
+      // Update the page element's img src if it was a placeholder
       if (pageElements[i]) {
         const el = pageElements[i].querySelector('img');
-        if (el && (!el.src || el.src.includes('data:') || el.dataset.waiting === '1')) {
+        if (el && el.dataset.waiting === '1') {
           el.src = IMG_DIR + 'slide_' + i + '.jpg';
           el.style.opacity = '1';
           el.dataset.waiting = '0';
+          // Hide placeholder text
+          const ph = pageElements[i].querySelector('.img-placeholder');
+          if (ph) ph.style.display = 'none';
         }
       }
       // Update grid thumbnail
       const thumb = gridContainer.querySelector('[data-page="' + i + '"] img');
-      if (thumb && (!thumb.src || thumb.src.includes('data:'))) {
+      if (thumb && thumb.dataset.waiting === '1') {
         thumb.src = IMG_DIR + 'slide_' + i + '.jpg';
-      }
-      if (loadedImages >= TOTAL_PAGES) {
-        loadCount.textContent = '准备就绪';
+        thumb.style.opacity = '1';
+        thumb.dataset.waiting = '0';
       }
     };
     img.src = IMG_DIR + 'slide_' + i + '.jpg';
-    imageCache[i] = img;
   }
 
-  function finishLoading() {
-    // No longer used — pages show immediately
-  }
+  function finishLoading() { /* unused */ }
 
   // ── Build Page DOM ──
   function buildPages() {
     for (let i = 1; i <= TOTAL_PAGES; i++) {
       const div = document.createElement('div');
       div.className = 'page hidden';
-      // Show placeholder until image loads
-      const loaded = imageLoaded[i];
-      div.innerHTML = '<div class="img-placeholder" style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.85rem\">📄 第' + i + '页</div>'
-        + '<img src="' + (loaded ? IMG_DIR + 'slide_' + i + '.jpg' : '') + '" alt="第' + i + '页" loading="lazy"'
-        + ' style="position:relative;z-index:1;opacity:' + (loaded ? '1' : '0') + ';transition:opacity 0.3s"'
-        + ' data-waiting="' + (loaded ? '0' : '1') + '">';
+      div.innerHTML = '<div class="img-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#444;font-size:1rem">📄 第' + i + '页</div>'
+        + '<img src="" alt="第' + i + '页" loading="lazy"'
+        + ' style="position:relative;z-index:1;opacity:0;transition:opacity 0.3s" data-waiting="1">';
       pageContainer.appendChild(div);
       pageElements[i] = div;
     }
@@ -492,9 +494,7 @@
   function preloadNearby(page) {
     const range = 2;
     for (let i = page - range; i <= page + range; i++) {
-      if (i >= 1 && i <= TOTAL_PAGES && !imageLoaded[i]) {
-        loadImage(i);
-      }
+      if (i >= 1 && i <= TOTAL_PAGES && !imageCache[i]) loadImage(i);
     }
   }
 
@@ -603,12 +603,12 @@
     for (let i = 1; i <= TOTAL_PAGES; i++) {
       const div = document.createElement('div');
       div.className = 'thumb';
-      div.innerHTML = '<img src="' + IMG_DIR + 'slide_' + i + '.jpg" alt="第' + i + '页" loading="lazy"><span class="num">' + i + '</span>';
-      div.onclick = () => {
+      div.setAttribute('data-page', i);
+      div.innerHTML = '<img src="" alt="第' + i + '页" loading="lazy" style="opacity:0" data-waiting="1"><span class="num">' + i + '</span>';
+      div.addEventListener('click', function() {
         toggleGrid();
         goToPage(i);
-      };
-      div.setAttribute('data-page', i);
+      });
       gridContainer.appendChild(div);
     }
   }
@@ -727,13 +727,29 @@
     } catch(e) {}
   }
 
-  // ── Expose to global scope (for onclick handlers) ──
-  window.prevPage = prevPage;
-  window.nextPage = nextPage;
-  window.goToCover = goToCover;
-  window.toggleGrid = toggleGrid;
+  // ── Button Event Listeners (more reliable than onclick in WeChat) ──
+  function bindButtons() {
+    document.getElementById('btnCover')?.addEventListener('click', goToCover);
+    document.getElementById('btnGrid')?.addEventListener('click', toggleGrid);
+    document.getElementById('btnPrev')?.addEventListener('click', prevPage);
+    document.getElementById('btnNext')?.addEventListener('click', nextPage);
+    document.getElementById('btnArrowLeft')?.addEventListener('click', prevPage);
+    document.getElementById('btnArrowRight')?.addEventListener('click', nextPage);
+    document.getElementById('btnOverlayClose')?.addEventListener('click', toggleGrid);
+
+    // Tap overlay background to close
+    gridOverlay.addEventListener('click', function(e) {
+      if (e.target === gridOverlay) toggleGrid();
+    });
+
+    // Tap loading screen to dismiss
+    loading.addEventListener('click', function() {
+      loading.classList.add('hidden');
+    });
+  }
 
   // ── Init ──
+  bindButtons();
   preloadImages();
 })();
 </script>
