@@ -379,7 +379,8 @@
   'use strict';
 
   const TOTAL_PAGES = 20; // PPT slides
-  const IMG_DIR = 'ppt/'; // image directory
+  // CDN 加速（国内加载快 10 倍+），如需关闭改回 'slides/'
+  const IMG_DIR = 'https://cdn.jsdelivr.net/gh/1999Daniel/flipbook@main/slides/';
 
   let currentPage = -1; // -1 = cover
   let isAnimating = false;
@@ -401,61 +402,98 @@
   const toast = document.getElementById('toast');
   const stage = document.getElementById('stage');
 
-  // ── Preload Images ──
+  // ── Progressive Loading (don't wait for all images) ──
   const imageCache = new Array(TOTAL_PAGES + 1).fill(null);
+  const imageLoaded = new Array(TOTAL_PAGES + 1).fill(false);
   const pageElements = new Array(TOTAL_PAGES + 1).fill(null);
+  let minLoaded = 0; // highest consecutive loaded page from 1
 
   function preloadImages() {
-    for (let i = 1; i <= TOTAL_PAGES; i++) {
-      const img = new Image();
-      img.onload = img.onerror = () => {
-        loadedImages++;
-        loadCount.textContent = `加载中 ${loadedImages}/${TOTAL_PAGES}`;
-        if (loadedImages >= TOTAL_PAGES) { finishLoading(); }
-      };
-      img.src = IMG_DIR + 'slide_' + i + '.png';
-      imageCache[i] = img;
+    // Build DOM first (don't wait)
+    buildPages();
+    buildGrid();
+    if (pageElements[1]) pageElements[1].className = 'page next';
+    updateUI();
+    loadProgress();
+
+    // Load all images in background, prioritizing first pages
+    const order = [];
+    for (let i = 1; i <= TOTAL_PAGES; i++) order.push(i);
+    // Start with first 3 pages
+    const priority = [1, 2, 3];
+    priority.forEach(i => loadImage(i));
+
+    // Then load rest with slight delay to not block first pages
+    let idx = 3;
+    function loadNext() {
+      if (idx >= TOTAL_PAGES) return;
+      idx++;
+      loadImage(order[idx - 1]);
+      setTimeout(loadNext, 100);
     }
-    // Also preload first few eagerly
-    const eager = [1, 2, 3];
-    eager.forEach(i => {
-      if (imageCache[i]) imageCache[i].load();
-    });
+    setTimeout(loadNext, 500);
+
+    // Hide loading screen quickly
+    setTimeout(() => {
+      loading.classList.add('hidden');
+      loadCount.textContent = '准备就绪';
+    }, 800);
+  }
+
+  function loadImage(i) {
+    if (imageLoaded[i]) return;
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      imageLoaded[i] = true;
+      loadedImages++;
+      loadCount.textContent = `加载中 ${loadedImages}/${TOTAL_PAGES}`;
+      // Update the actual page element src if it was placeholder
+      if (pageElements[i]) {
+        const el = pageElements[i].querySelector('img');
+        if (el && (!el.src || el.src.includes('data:') || el.dataset.waiting === '1')) {
+          el.src = IMG_DIR + 'slide_' + i + '.jpg';
+          el.style.opacity = '1';
+          el.dataset.waiting = '0';
+        }
+      }
+      // Update grid thumbnail
+      const thumb = gridContainer.querySelector('[data-page="' + i + '"] img');
+      if (thumb && (!thumb.src || thumb.src.includes('data:'))) {
+        thumb.src = IMG_DIR + 'slide_' + i + '.jpg';
+      }
+      if (loadedImages >= TOTAL_PAGES) {
+        loadCount.textContent = '准备就绪';
+      }
+    };
+    img.src = IMG_DIR + 'slide_' + i + '.jpg';
+    imageCache[i] = img;
   }
 
   function finishLoading() {
-    setTimeout(() => {
-      loading.classList.add('hidden');
-      buildPages();
-      buildGrid();
-      // Show page 1 as preview peek on the right
-      if (pageElements[1]) {
-        pageElements[1].className = 'page next';
-      }
-      updateUI();
-      loadProgress();
-    }, 400);
+    // No longer used — pages show immediately
   }
 
   // ── Build Page DOM ──
   function buildPages() {
-    // Create page elements for 1..TOTAL_PAGES
     for (let i = 1; i <= TOTAL_PAGES; i++) {
       const div = document.createElement('div');
       div.className = 'page hidden';
-      div.innerHTML = '<img src="' + IMG_DIR + 'slide_' + i + '.png" alt="第' + i + '页" loading="lazy">';
+      // Show placeholder until image loads
+      const loaded = imageLoaded[i];
+      div.innerHTML = '<div class="img-placeholder" style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.85rem\">📄 第' + i + '页</div>'
+        + '<img src="' + (loaded ? IMG_DIR + 'slide_' + i + '.jpg' : '') + '" alt="第' + i + '页" loading="lazy"'
+        + ' style="position:relative;z-index:1;opacity:' + (loaded ? '1' : '0') + ';transition:opacity 0.3s"'
+        + ' data-waiting="' + (loaded ? '0' : '1') + '">';
       pageContainer.appendChild(div);
       pageElements[i] = div;
     }
-    // Pre-load nearby images
-    preloadNearby(0);
   }
 
   function preloadNearby(page) {
-    const range = 3;
+    const range = 2;
     for (let i = page - range; i <= page + range; i++) {
-      if (i >= 1 && i <= TOTAL_PAGES && imageCache[i] && !imageCache[i].complete) {
-        imageCache[i].load = imageCache[i].load || (() => {});
+      if (i >= 1 && i <= TOTAL_PAGES && !imageLoaded[i]) {
+        loadImage(i);
       }
     }
   }
@@ -565,7 +603,7 @@
     for (let i = 1; i <= TOTAL_PAGES; i++) {
       const div = document.createElement('div');
       div.className = 'thumb';
-      div.innerHTML = '<img src="' + IMG_DIR + 'slide_' + i + '.png" alt="第' + i + '页" loading="lazy"><span class="num">' + i + '</span>';
+      div.innerHTML = '<img src="' + IMG_DIR + 'slide_' + i + '.jpg" alt="第' + i + '页" loading="lazy"><span class="num">' + i + '</span>';
       div.onclick = () => {
         toggleGrid();
         goToPage(i);
@@ -688,6 +726,12 @@
       }
     } catch(e) {}
   }
+
+  // ── Expose to global scope (for onclick handlers) ──
+  window.prevPage = prevPage;
+  window.nextPage = nextPage;
+  window.goToCover = goToCover;
+  window.toggleGrid = toggleGrid;
 
   // ── Init ──
   preloadImages();
